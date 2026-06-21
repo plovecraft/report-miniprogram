@@ -1,0 +1,34 @@
+<view class="container home-page">
+  <view class="hero">
+    <view class="hero-top">
+      <view class="eyebrow">Lab Report</view>
+      <view class="avatar-button {{loggedIn ? 'online' : ''}}" bindtap="openProfile">
+        <text>{{loggedIn ? '我' : '登'}}</text>
+      </view>
+    </view>
+    <view class="title">实验报告生成工作台</view>
+    <view class="subtitle">保留原 Word 模板结构，后端完成指导书解析、图片整理和正文修订。</view>
+    <view class="hero-actions">
+      <button class="primary-button hero-button" bindtap="startCreate">开始生成</button>
+      <button class="secondary-button hero-button ghost" bindtap="openHistory">任务历史</button>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">需要准备</view>
+    <view class="requirement" wx:for="{{requirements}}" wx:key="*this">
+      <view class="dot"></view>
+      <text>{{item}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">生成流程</view>
+    <view class="step-row">
+      <view class="step" wx:for="{{steps}}" wx:key="*this">
+        <view class="step-index">{{index + 1}}</view>
+        <view class="step-text">{{item}}</view>
+      </view>
+    </view>
+  </view>
+</view>

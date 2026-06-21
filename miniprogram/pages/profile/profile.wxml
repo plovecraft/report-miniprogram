@@ -1,0 +1,47 @@
+<view class="container profile-page">
+  <view class="profile-hero">
+    <view class="avatar-large {{loggedIn ? 'online' : ''}}">
+      <text>{{loggedIn ? '我' : '未'}}</text>
+    </view>
+    <view class="profile-title">{{loggedIn ? '已登录' : '未登录'}}</view>
+    <view class="profile-subtitle">{{loggedIn ? '任务历史和使用记录将按当前账号隔离。' : '登录后可以查看自己的历史任务和使用记录。'}}</view>
+  </view>
+
+  <view class="section account-card">
+    <view class="section-title">账号信息</view>
+    <view wx:if="{{loggedIn}}" class="info-list">
+      <view class="info-row">
+        <text class="info-label">用户标识</text>
+        <text class="info-value">{{userLabel}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">登录方式</text>
+        <text class="info-value">微信登录</text>
+      </view>
+    </view>
+    <view wx:else class="empty-hint">当前设备尚未登录。</view>
+
+    <button wx:if="{{!loggedIn}}" class="primary-button profile-action" loading="{{loginLoading}}" disabled="{{loginLoading}}" bindtap="loginWithWechat">微信登录</button>
+    <button wx:else class="secondary-button profile-action" bindtap="logout">退出本机登录</button>
+  </view>
+
+  <view class="section usage-card">
+    <view class="usage-head">
+      <view class="section-title">使用记录</view>
+      <button class="mini-button" bindtap="openHistory">任务历史</button>
+    </view>
+    <view wx:if="{{errorMessage}}" class="error-box">{{errorMessage}}</view>
+    <view wx:if="{{usageLoading}}" class="empty-hint">正在读取使用记录...</view>
+    <view wx:elif="{{!loggedIn}}" class="empty-hint">登录后显示使用记录。</view>
+    <view wx:elif="{{!usageRecords.length}}" class="empty-hint">暂无使用记录。</view>
+    <view wx:else class="usage-list">
+      <view wx:for="{{usageRecords}}" wx:key="createdAt" class="usage-item">
+        <view>
+          <view class="usage-event">{{item.eventText}}</view>
+          <view class="usage-task">{{item.taskId || '无关联任务'}}</view>
+        </view>
+        <view class="usage-time">{{item.timeText}}</view>
+      </view>
+    </view>
+  </view>
+</view>

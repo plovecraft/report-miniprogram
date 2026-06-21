@@ -1,0 +1,293 @@
+﻿<view class="container task-page">
+  <view class="page-header">
+    <button class="page-back" bindtap="onBackTap">返回</button>
+  </view>
+  <view class="page-title">任务详情</view>
+  <view class="muted task-id">任务 ID：{{taskId || '-'}}</view>
+
+  <view class="section status-panel">
+    <view class="status-main">{{task ? task.message : (loading ? '正在加载任务详情…' : '未找到任务信息')}}</view>
+    <progress percent="{{task ? task.progress : 0}}" active stroke-width="6" />
+    <view class="muted progress-text">{{task ? task.progress : 0}}%</view>
+
+    <view class="step-list">
+      <view class="step {{task && task.status === item.key ? 'active' : ''}} {{task && task.status === 'done' ? 'done' : ''}}" wx:for="{{steps}}" wx:key="key">
+        <view class="step-dot"></view>
+        <view class="step-title">{{item.title}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{errorMessage}}" class="error-box">{{errorMessage}}</view>
+  </view>
+
+  <view wx:if="{{task && task.preview && task.status === 'preview_ready'}}" class="section preview-panel">
+    <view class="section-title">预览摘要</view>
+    <view class="preview-name">{{task.preview.experimentName || '未识别实验名称'}}</view>
+    <view wx:if="{{task.preview.experimentTypeName}}" class="preview-type">实验类型：{{task.preview.experimentTypeName}}</view>
+    <view class="template-box">
+      <view>
+        <view class="template-name">{{task.preview.template.displayName}}</view>
+        <view class="template-location">{{task.preview.template.bodyLocation}}</view>
+      </view>
+      <view class="template-score">{{task.preview.template.confidencePercent}}</view>
+    </view>
+    <view wx:if="{{dragMessage}}" class="drag-message">{{dragMessage}}</view>
+
+    <view class="preview-block">
+      <view class="preview-subtitle">章节与图片</view>
+      <view wx:if="{{previewLayoutSourceIsAi}}" class="preview-layout-source-note">
+        当前预览基于 AI 布局方案，生成前仍会经过后端校验。
+      </view>
+      <view wx:for="{{task.preview.sections}}" wx:key="title" wx:for-index="sectionIndex" wx:for-item="section" class="preview-section {{draggingActive && dragInsertSectionIndex === sectionIndex ? 'drop-target' : ''}}">
+        <view class="preview-section-head">
+          <view class="preview-section-title">{{section.title}}</view>
+          <view class="preview-section-meta">
+            {{section.blockCount ? section.blockCount + ' 块' : (section.paragraphs.length ? section.paragraphs.length + ' 段' : '待生成正文')}}
+          </view>
+        </view>
+        <view wx:if="{{section.images.length}}" class="section-image-grid">
+          <block wx:for="{{section.images}}" wx:key="imageIndex" wx:for-index="imageIndexInSection" wx:for-item="image">
+            <view
+              class="section-image-card {{image.recognized ? '' : 'unknown'}} {{draggingImageIndex === image.imageIndex ? 'dragging' : ''}}"
+              data-section-index="{{sectionIndex}}"
+              data-image-index="{{image.imageIndex}}"
+              catchtouchstart="onImageDragStart"
+              catchtouchmove="onImageDragMove"
+              catchtouchend="onImageDragEnd"
+              catchtouchcancel="onImageDragEnd"
+            >
+              <view
+                wx:if="{{draggingActive && dragInsertSectionIndex === sectionIndex && dragInsertBeforeImageIndex === image.imageIndex}}"
+                class="drag-insert-line"
+              ></view>
+              <image class="section-image-thumb" src="{{image.imageUrl}}" mode="aspectFill" data-url="{{image.imageUrl}}" bindtap="previewSectionImage" />
+              <view class="section-image-caption">{{image.caption}}</view>
+              <view class="section-image-type">{{image.categoryCn || (image.recognized ? image.type : '待确认')}}</view>
+              <view wx:if="{{image.type && image.categoryCn && image.type !== image.categoryCn}}" class="section-image-type muted">{{image.type}}</view>
+              <view wx:if="{{image.confidencePercent}}" class="section-image-type muted">置信度：{{image.confidencePercent}}</view>
+              <view wx:if="{{image.needsReview}}" class="section-image-review">建议复核</view>
+              <view wx:if="{{image.reviewReasonsText}}" class="section-image-review-reasons">
+                {{image.reviewReasonsText}}
+              </view>
+              <view class="image-edit-meta">当前章节：{{image.insertSection || image.section}}</view>
+              <view class="image-edit-actions">
+                <picker range="{{imageCategoryOptions}}" range-key="label" data-image-index="{{image.imageIndex}}" bindchange="onImageCategoryChange">
+                  <view class="image-edit-picker">修改分类</view>
+                </picker>
+                <picker range="{{task.preview.sections}}" range-key="title" data-image-index="{{image.imageIndex}}" bindchange="onImageSectionChange">
+                  <view class="image-edit-picker">修改章节</view>
+                </picker>
+              </view>
+              <input
+                class="image-caption-input"
+                value="{{image.caption}}"
+                data-image-index="{{image.imageIndex}}"
+                bindinput="onImageCaptionInput"
+                placeholder="输入图片题注"
+              />
+              <button
+                class="secondary-button image-save-button"
+                size="mini"
+                data-image-index="{{image.imageIndex}}"
+                loading="{{savingImagePlan}}"
+                disabled="{{savingImagePlan}}"
+                bindtap="onSaveImageOverride"
+              >
+                保存图片信息
+              </button>
+            </view>
+          </block>
+          <view
+            wx:if="{{draggingActive && dragInsertSectionIndex === sectionIndex && dragInsertAtEnd}}"
+            class="drag-placeholder"
+          ></view>
+        </view>
+      </view>
+      <view wx:if="{{task.preview.imagePlan.length && !task.preview.insertedImageCount}}" class="muted empty-text">当前没有可插入的图片。</view>
+    </view>
+
+    <view wx:if="{{task.preview.tablePlan && task.preview.tablePlan.length}}" class="preview-block">
+      <view class="preview-subtitle">推荐表格</view>
+      <view wx:if="{{unsavedSelectedTableCount > 0}}" class="table-unsaved-banner">
+        有未保存的表格修改，请保存后再生成报告。
+      </view>
+      <view wx:for="{{task.preview.tablePlan}}" wx:key="tableId" class="table-plan-card">
+        <view class="table-plan-head">
+          <view class="table-plan-title">{{item.title}}</view>
+          <view class="table-plan-badge-group">
+            <view wx:if="{{item.autoPlanned}}" class="table-plan-badge">Auto</view>
+            <view wx:if="{{item.edited}}" class="table-plan-badge edited">Edited</view>
+          </view>
+        </view>
+        <view class="table-plan-control">
+          <view class="table-plan-control-text">{{item.selected ? '保留' : '不插入'}}</view>
+          <switch color="#2454ff" checked="{{item.selected}}" data-table-id="{{item.tableId}}" disabled="{{savingTablePlan}}" bindchange="onTableSelectionChange" />
+        </view>
+        <view wx:if="{{item.saving}}" class="table-plan-save-state saving">保存中</view>
+        <view wx:elif="{{item.dirty}}" class="table-plan-save-state dirty">未保存</view>
+        <view wx:elif="{{item.edited}}" class="table-plan-save-state saved">已保存修改</view>
+        <view wx:else class="table-plan-save-state clean">未修改</view>
+        <view wx:if="{{item.saveError}}" class="table-plan-save-error">{{item.saveError}}</view>
+        <view class="table-plan-meta">插入章节：{{item.sectionTitle}}</view>
+        <view class="table-plan-meta">结构：{{item.columnCount}} 列 {{item.rowCount}} 行</view>
+        <view class="table-plan-headers">
+          <view class="table-plan-headers-label">表头</view>
+          <view class="table-plan-headers-value">{{item.headersText}}</view>
+        </view>
+        <view class="table-plan-rows">
+          <view class="table-plan-rows-label">数据行</view>
+          <view wx:for="{{item.rows}}" wx:key="index" wx:for-item="row" wx:for-index="rowIndex" class="table-plan-row">
+            <view wx:for="{{row}}" wx:key="index" wx:for-item="cell" wx:for-index="columnIndex" class="table-plan-cell">
+              <input
+                class="table-plan-input"
+                value="{{cell}}"
+                data-table-id="{{item.tableId}}"
+                data-row-index="{{rowIndex}}"
+                data-column-index="{{columnIndex}}"
+                disabled="{{!item.selected || savingTablePlan}}"
+                bindinput="onTableCellInput"
+              />
+            </view>
+            <button
+              class="secondary-button table-row-delete"
+              size="mini"
+              data-table-id="{{item.tableId}}"
+              data-row-index="{{rowIndex}}"
+              disabled="{{!item.selected || savingTablePlan}}"
+              bindtap="onTableDeleteRow"
+            >
+              删除本行
+            </button>
+          </view>
+          <view wx:if="{{!item.selected}}" class="table-plan-disabled-hint">不插入的表格不会写入 DOCX。</view>
+          <view class="table-plan-row-actions">
+            <button
+              class="secondary-button table-plan-save"
+              size="mini"
+              data-table-id="{{item.tableId}}"
+              disabled="{{!item.selected || savingTablePlan}}"
+              bindtap="onTableAddRow"
+            >
+              新增一行
+            </button>
+            <button
+              wx:if="{{item.source === 'manual'}}"
+              class="secondary-button table-plan-save"
+              size="mini"
+              data-table-id="{{item.tableId}}"
+              disabled="{{savingTablePlan}}"
+              bindtap="onDeleteManualTable"
+            >
+              删除表格
+            </button>
+          </view>
+          <button
+            class="secondary-button table-plan-save"
+            size="mini"
+            data-table-id="{{item.tableId}}"
+            disabled="{{!item.selected || savingTablePlan || item.saving}}"
+            bindtap="onSaveTableEdits"
+          >
+            {{item.saving ? '保存中…' : '保存表格内容'}}
+          </button>
+        </view>
+      </view>
+      <view class="manual-table-draft">
+        <view class="table-plan-rows-label">手动添加表格</view>
+        <input class="table-plan-input" value="{{manualTableDraftTitle}}" bindinput="onManualTableTitleInput" placeholder="表格标题" />
+        <input class="table-plan-input" value="{{manualTableDraftHeadersText}}" bindinput="onManualTableHeadersInput" placeholder="表头，使用逗号分隔，最多 6 列" />
+        <view class="table-plan-row-actions">
+          <button class="secondary-button table-plan-save" size="mini" bindtap="onAddManualTable">新增手动表格</button>
+          <button class="secondary-button table-plan-save" size="mini" loading="{{savingTablePlan}}" disabled="{{savingTablePlan}}" bindtap="onSaveManualTables">保存手动表格</button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{aiPlannerView.visible}}" class="preview-block ai-planner-card">
+      <view class="preview-subtitle">AI 规划建议（影子模式）</view>
+      <view class="ai-planner-status {{aiPlannerView.statusClass}}">{{aiPlannerView.statusText}}</view>
+      <view class="ai-planner-source">{{aiPlannerView.currentSourceText}}</view>
+      <view class="ai-planner-note">{{aiPlannerView.note}}</view>
+      <view class="ai-planner-note">AI 布局方案仍会经过后端校验和生成前 shadow gate，不会直接操作 Word。</view>
+
+      <view wx:if="{{aiPlannerView.adoptable}}" class="ai-planner-actions">
+        <button
+          wx:if="{{!aiPlannerView.usingAi}}"
+          class="secondary-button ai-planner-button"
+          size="mini"
+          bindtap="onAdoptAiLayoutPlan"
+        >
+          采用 AI 布局方案
+        </button>
+        <button
+          wx:if="{{aiPlannerView.usingAi}}"
+          class="secondary-button ai-planner-button"
+          size="mini"
+          bindtap="onRestoreRuleLayoutPlan"
+        >
+          恢复规则布局方案
+        </button>
+      </view>
+
+      <view wx:if="{{!aiPlannerView.adoptable && aiPlannerView.adoptionBlockedReason}}" class="ai-planner-disabled">
+        {{aiPlannerView.adoptionBlockedReason}}
+      </view>
+
+      <view wx:if="{{aiPlannerView.summaryLines.length}}" class="ai-planner-list">
+        <view wx:for="{{aiPlannerView.summaryLines}}" wx:key="*this" class="ai-planner-item">{{item}}</view>
+      </view>
+
+      <view wx:if="{{aiPlannerView.diffLines.length}}" class="ai-planner-list ai-planner-diff-list">
+        <view wx:for="{{aiPlannerView.diffLines}}" wx:key="*this" class="ai-planner-item">{{item}}</view>
+      </view>
+
+      <view wx:if="{{aiPlannerView.warningLines.length}}" class="ai-planner-list ai-planner-warning-list">
+        <view wx:for="{{aiPlannerView.warningLines}}" wx:key="*this" class="ai-planner-item warning">{{item}}</view>
+      </view>
+
+      <view wx:if="{{aiPlannerView.errorText}}" class="ai-planner-error">{{aiPlannerView.errorText}}</view>
+    </view>
+  </view>
+
+  <button wx:if="{{task && task.status === 'preview_ready'}}" class="primary-button action-button" loading="{{confirming}}" disabled="{{confirming}}" bindtap="confirmGenerate">
+    确认并生成 DOCX
+  </button>
+
+  <view wx:if="{{task && task.qualityReport}}" class="section quality-panel">
+    <view class="section-title">质量检查</view>
+    <view class="quality-status {{task.qualityReport.passed ? 'pass' : 'warn'}}">
+      {{task.qualityReport.passed ? '通过' : '需关注'}}
+    </view>
+    <view class="quality-grid">
+      <view class="quality-item">
+        <view class="quality-label">模板保留</view>
+        <view class="quality-value">{{task.qualityReport.checks.template_preserved ? '是' : '否'}}</view>
+      </view>
+      <view class="quality-item">
+        <view class="quality-label">正文替换</view>
+        <view class="quality-value">{{task.qualityReport.checks.body_replaced ? '是' : '否'}}</view>
+      </view>
+      <view class="quality-item">
+        <view class="quality-label">图片写入</view>
+        <view class="quality-value">{{task.qualityReport.checks.images_inserted || 0}} / {{task.qualityReport.checks.expected_images || 0}}</view>
+      </view>
+      <view class="quality-item">
+        <view class="quality-label">文件名残留</view>
+        <view class="quality-value">{{task.qualityReport.checks.filename_reference_found ? '是' : '否'}}</view>
+      </view>
+    </view>
+    <view wx:if="{{task.qualityReport.warnings.length}}" class="warning-list">
+      <view wx:for="{{task.qualityReport.warnings}}" wx:key="*this" class="warning-item">{{item}}</view>
+    </view>
+  </view>
+
+  <button wx:if="{{task && task.status === 'done'}}" class="primary-button action-button" loading="{{downloading}}" disabled="{{downloading}}" bindtap="downloadDocx">
+    下载 DOCX
+  </button>
+
+  <button class="secondary-button action-button" bindtap="createAnother">创建新任务</button>
+
+  <view wx:if="{{draggingActive}}" class="drag-ghost" style="left: {{dragX}}px; top: {{dragY}}px;">
+    <image class="drag-ghost-image" src="{{draggingImageUrl}}" mode="aspectFill" />
+  </view>
+</view>

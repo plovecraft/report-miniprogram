@@ -1,0 +1,114 @@
+<view class="container create-page">
+  <view class="page-title">创建实验报告任务</view>
+  <view class="muted page-desc">上传原报告、指导书和实验图片。大模型 API Key 和文档处理都在后端完成。</view>
+
+  <view class="section">
+    <view class="section-title">实验材料</view>
+    <view class="mode-switch">
+      <view class="mode-option {{uploadMode === 'normal' ? 'active' : ''}}" data-mode="normal" bindtap="selectUploadMode">普通上传</view>
+      <view class="mode-option {{uploadMode === 'zip' ? 'active' : ''}}" data-mode="zip" bindtap="selectUploadMode">ZIP 材料包</view>
+    </view>
+
+    <view wx:if="{{uploadMode === 'zip'}}" class="file-card" bindtap="chooseMaterialZipFile">
+      <view>
+        <view class="file-title">实验材料 ZIP</view>
+        <view class="file-name">{{materialZipFile ? materialZipFile.name : '从微信聊天记录选择 .zip 压缩包'}}</view>
+      </view>
+      <view class="file-action">上传</view>
+    </view>
+
+    <view wx:if="{{uploadMode === 'normal'}}" class="file-card" bindtap="chooseReportFile">
+      <view>
+        <view class="file-title">原始实验报告 DOCX</view>
+        <view class="file-name">{{reportFile ? reportFile.name : '从微信聊天记录选择 DOCX'}}</view>
+      </view>
+      <view class="file-action">上传</view>
+    </view>
+
+    <view wx:if="{{uploadMode === 'normal'}}" class="file-card" bindtap="chooseGuideFile">
+      <view>
+        <view class="file-title">实验指导书</view>
+        <view class="file-name">{{guideFile ? guideFile.name : '从微信聊天记录选择 DOC、DOCX、PDF'}}</view>
+      </view>
+      <view class="file-action">上传</view>
+    </view>
+
+    <view wx:if="{{uploadMode === 'normal'}}" class="file-card" bindtap="chooseImages">
+      <view>
+        <view class="file-title">实验图片</view>
+        <view class="file-name">{{imageFiles.length ? imageFiles.length + ' 张图片已选择，可继续追加' : '从聊天记录选择程序图、接线图、现象图，最多 50 张'}}</view>
+      </view>
+      <view class="file-action">上传</view>
+    </view>
+
+    <view wx:if="{{uploadMode === 'normal' && imageFiles.length}}" class="image-classify-list">
+      <view wx:for="{{imageFiles}}" wx:key="name" wx:for-index="index" wx:for-item="image" class="image-classify-item">
+        <image class="image-thumb" src="{{image.path}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" />
+        <view class="image-info">
+          <view class="image-name">{{image.name}}</view>
+          <picker mode="selector" range="{{imageCategoryOptions}}" range-key="label" value="{{image.categoryIndex}}" data-index="{{index}}" bindchange="onImageCategoryChange">
+            <view class="category-picker">
+              <text>{{image.categoryLabel}}</text>
+              <text class="picker-arrow">修改</text>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{uploadMode === 'zip'}}" class="zip-hint">
+      压缩包内可按“程序图、现象图、接线图、实物图”等文件夹整理图片；预览页仍可调整图片位置。
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">报告信息</view>
+    <view class="profile-actions">
+      <button class="profile-button" size="mini" bindtap="saveUserProfileAction">保存常用信息</button>
+      <button class="profile-button secondary" size="mini" bindtap="clearUserProfileAction">清空常用信息</button>
+    </view>
+    <view class="field">
+      <text class="label">实验序号</text>
+      <input class="input" placeholder="例如：实验四" value="{{experimentNo}}" bindinput="onExperimentNoInput" />
+    </view>
+    <view class="field">
+      <text class="label">实验课程名称</text>
+      <input class="input" placeholder="可留空，默认保留原模板" value="{{courseName}}" bindinput="onCourseNameInput" />
+    </view>
+    <view class="field">
+      <text class="label">指导老师</text>
+      <input class="input" placeholder="可留空，默认保留原模板" value="{{teacherName}}" bindinput="onTeacherNameInput" />
+    </view>
+    <view class="field">
+      <text class="label">开课学院及实验室</text>
+      <input class="input" placeholder="可留空，默认保留原模板" value="{{offeringCollegeLab}}" bindinput="onOfferingCollegeLabInput" />
+    </view>
+    <view class="field">
+      <text class="label">用户学院</text>
+      <input class="input" placeholder="可留空，默认保留原模板" value="{{studentCollege}}" bindinput="onStudentCollegeInput" />
+    </view>
+    <view class="field">
+      <text class="label">姓名</text>
+      <input class="input" placeholder="可留空，由后端从原报告读取" value="{{studentName}}" bindinput="onStudentNameInput" />
+    </view>
+    <view class="field">
+      <text class="label">学号</text>
+      <input class="input" placeholder="可留空" value="{{studentId}}" bindinput="onStudentIdInput" />
+    </view>
+    <view class="field">
+      <text class="label">班级</text>
+      <input class="input" placeholder="可留空" value="{{className}}" bindinput="onClassNameInput" />
+    </view>
+    <view class="switch-field">
+      <view>
+        <view class="label strong">同时导出 PDF</view>
+        <view class="muted">第一版以后端支持情况为准</view>
+      </view>
+      <switch checked="{{exportPdf}}" bindchange="onExportPdfChange" />
+    </view>
+  </view>
+
+  <button class="primary-button submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitTask">
+    提交生成
+  </button>
+</view>

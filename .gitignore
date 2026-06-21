@@ -1,0 +1,25 @@
+# local deployment keys and staging files
+.deploy/
+.deploy_*
+.deploy_plc_report
+.deploy_plc_report.pub
+
+# backend runtime state
+backend/.env
+backend/storage/
+backend/**/*.pyc
+backend/**/__pycache__/
+.pytest_cache/
+
+# mini program local/private config
+project.private.config.json
+
+# dependencies and build outputs
+node_modules/
+miniprogram_npm/
+dist/
+build/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

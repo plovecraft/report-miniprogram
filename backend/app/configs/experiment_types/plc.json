@@ -1,0 +1,645 @@
+{
+  "experimentType": "plc",
+  "displayName": "PLC 实验报告",
+  "defaultSections": [
+    "一、实验目的",
+    "二、实验设备",
+    "三、实验要求",
+    "四、实验操作过程",
+    "五、程序设计与梯形图",
+    "六、实验结果",
+    "七、实验心得"
+  ],
+  "fallbackSections": [
+    {
+      "title": "一、实验目的",
+      "paragraphTemplates": [
+        "根据实验指导书《{guideName}》整理{experimentNo}的实验目标。"
+      ]
+    },
+    {
+      "title": "二、实验要求",
+      "paragraphTemplates": [
+        "完成{experimentNo}相关控制要求，保持原报告模板和学生信息不变。"
+      ]
+    },
+    {
+      "title": "三、实验信息",
+      "paragraphTemplates": [
+        "姓名：{studentName}",
+        "学号：{studentId}",
+        "班级：{className}"
+      ]
+    },
+    {
+      "title": "四、实验操作过程",
+      "paragraphTemplates": [
+        "根据指导书步骤和上传图片整理操作过程。当前未配置大模型时，仅写入结构化骨架。"
+      ]
+    },
+    {
+      "title": "五、程序设计与图片材料",
+      "content": "image_summary"
+    },
+    {
+      "title": "六、实验结果",
+      "paragraphTemplates": [
+        "根据现象图、实物图和运行记录整理实验结果。配置大模型后将自动生成正式内容。"
+      ]
+    },
+    {
+      "title": "七、实验心得",
+      "paragraphTemplates": [
+        "配置大模型后将自动补全实验心得，并保持学生实验报告语气。"
+      ]
+    }
+  ],
+  "fallbackImageLabels": {
+    "program": "程序图",
+    "wiring": "接线图",
+    "physical": "实物图",
+    "result": "现象/结果图",
+    "other": "其他图片"
+  },
+  "fallbackNoImagesText": "暂未上传实验图片。",
+  "imageTypes": {
+    "program": {
+      "displayName": "程序图",
+      "section": "五、程序设计与梯形图",
+      "widthCm": 8.0
+    },
+    "wiring": {
+      "displayName": "接线图",
+      "section": "四、实验操作过程",
+      "widthCm": 8.0
+    },
+    "physical": {
+      "displayName": "实物图",
+      "section": "六、实验结果",
+      "widthCm": 11.5
+    },
+    "result": {
+      "displayName": "现象/结果图",
+      "section": "六、实验结果",
+      "widthCm": 11.5
+    },
+    "other": {
+      "displayName": "其他图片",
+      "section": "六、实验结果",
+      "widthCm": 9.0
+    }
+  },
+  "categoryOverrides": {
+    "wiring": {
+      "type": "wiring",
+      "section": "四、实验操作过程",
+      "caption": "实验接线图"
+    },
+    "physical": {
+      "type": "physical",
+      "section": "六、实验结果",
+      "caption": "实验实物图"
+    },
+    "program": {
+      "type": "program",
+      "section": "五、程序设计与梯形图",
+      "caption": "梯形图程序"
+    },
+    "basic_program": {
+      "type": "program",
+      "section": "五、程序设计与梯形图",
+      "caption": "基础题梯形图程序"
+    },
+    "thought1_program": {
+      "type": "program",
+      "section": "五、程序设计与梯形图",
+      "caption": "思考题 1 梯形图程序"
+    },
+    "thought2_program": {
+      "type": "program",
+      "section": "五、程序设计与梯形图",
+      "caption": "思考题 2 梯形图程序"
+    },
+    "basic_result": {
+      "type": "result",
+      "section": "六、实验结果",
+      "caption": "基础题运行现象"
+    },
+    "thought1_result": {
+      "type": "result",
+      "section": "六、实验结果",
+      "caption": "思考题 1 运行现象"
+    },
+    "thought2_result": {
+      "type": "result",
+      "section": "六、实验结果",
+      "caption": "思考题 2 运行现象"
+    },
+    "result": {
+      "type": "result",
+      "section": "六、实验结果",
+      "caption": "实验运行现象"
+    },
+    "other": {
+      "type": "other",
+      "section": "六、实验结果",
+      "caption": ""
+    }
+  },
+  "allowedTables": [
+    "io_assignment_table",
+    "phenomenon_record_table",
+    "truth_table"
+  ],
+  "keywords": [
+    "PLC",
+    "梯形图",
+    "I/O 分配",
+    "输入输出",
+    "继电器",
+    "指示灯",
+    "接线图",
+    "运行现象"
+  ],
+  "imageRecognition": {
+    "experiment_type": "plc",
+    "description": "PLC ??????",
+    "categories": [
+      {
+        "key": "program",
+        "en_label": "program",
+        "cn_label": "???",
+        "keywords": [
+          "??",
+          "???",
+          "??",
+          "program",
+          "ladder",
+          "awl",
+          "scl",
+          "network",
+          "??"
+        ],
+        "suggested": {
+          "insert_section": "??????????",
+          "caption": "?????",
+          "size_policy": "program"
+        },
+        "visual_rules": [
+          {
+            "feature": "light_bg_ratio",
+            "fn": "ramp",
+            "weight": 0.16,
+            "low": 0.25,
+            "high": 0.75
+          },
+          {
+            "feature": "line_count",
+            "fn": "ramp",
+            "weight": 0.18,
+            "low": 10,
+            "high": 90
+          },
+          {
+            "feature": "horizontal_lines",
+            "fn": "ramp",
+            "weight": 0.14,
+            "low": 8,
+            "high": 60
+          },
+          {
+            "feature": "hl_minus_vl",
+            "fn": "ramp",
+            "weight": 0.12,
+            "low": 0,
+            "high": 40
+          },
+          {
+            "feature": "long_line_ratio",
+            "fn": "ramp",
+            "weight": 0.14,
+            "low": 0.05,
+            "high": 0.35
+          },
+          {
+            "feature": "avg_line_length",
+            "fn": "ramp",
+            "weight": 0.1,
+            "low": 40,
+            "high": 160
+          },
+          {
+            "feature": "colorfulness",
+            "fn": "inverse_ramp",
+            "weight": 0.08,
+            "low": 10,
+            "high": 45
+          },
+          {
+            "feature": "small_component_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.08,
+            "low": 0.55,
+            "high": 0.9
+          }
+        ]
+      },
+      {
+        "key": "wiring",
+        "en_label": "wiring",
+        "cn_label": "???",
+        "keywords": [
+          "??",
+          "??",
+          "??",
+          "??",
+          "wiring",
+          "wire",
+          "circuit"
+        ],
+        "suggested": {
+          "insert_section": "????????",
+          "caption": "?????",
+          "size_policy": "wiring"
+        },
+        "visual_rules": [
+          {
+            "feature": "line_count",
+            "fn": "ramp",
+            "weight": 0.18,
+            "low": 8,
+            "high": 70
+          },
+          {
+            "feature": "horizontal_lines",
+            "fn": "ramp",
+            "weight": 0.14,
+            "low": 3,
+            "high": 35
+          },
+          {
+            "feature": "vertical_lines",
+            "fn": "ramp",
+            "weight": 0.14,
+            "low": 3,
+            "high": 35
+          },
+          {
+            "feature": "edge_density",
+            "fn": "band",
+            "weight": 0.16,
+            "low": 0.015,
+            "ideal_low": 0.04,
+            "ideal_high": 0.12,
+            "high": 0.22
+          },
+          {
+            "feature": "colorfulness",
+            "fn": "band",
+            "weight": 0.12,
+            "low": 8,
+            "ideal_low": 18,
+            "ideal_high": 65,
+            "high": 110
+          },
+          {
+            "feature": "light_bg_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.1,
+            "low": 0.35,
+            "high": 0.75
+          },
+          {
+            "feature": "highlight_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.08,
+            "low": 0.04,
+            "high": 0.16
+          },
+          {
+            "feature": "long_line_ratio",
+            "fn": "ramp",
+            "weight": 0.08,
+            "low": 0.03,
+            "high": 0.25
+          }
+        ]
+      },
+      {
+        "key": "phenomenon",
+        "en_label": "phenomenon",
+        "cn_label": "?????",
+        "keywords": [
+          "??",
+          "??",
+          "??",
+          "??",
+          "phenomenon",
+          "result"
+        ],
+        "suggested": {
+          "insert_section": "??????",
+          "caption": "??????",
+          "size_policy": "phenomenon"
+        },
+        "visual_rules": [
+          {
+            "feature": "colorfulness",
+            "fn": "ramp",
+            "weight": 0.25,
+            "low": 18,
+            "high": 75
+          },
+          {
+            "feature": "highlight_ratio",
+            "fn": "ramp",
+            "weight": 0.24,
+            "low": 0.003,
+            "high": 0.08
+          },
+          {
+            "feature": "light_bg_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.14,
+            "low": 0.25,
+            "high": 0.7
+          },
+          {
+            "feature": "edge_density",
+            "fn": "band",
+            "weight": 0.12,
+            "low": 0.01,
+            "ideal_low": 0.03,
+            "ideal_high": 0.11,
+            "high": 0.22
+          },
+          {
+            "feature": "line_count",
+            "fn": "inverse_ramp",
+            "weight": 0.1,
+            "low": 60,
+            "high": 180
+          },
+          {
+            "feature": "abs_ar_diff",
+            "fn": "inverse_ramp",
+            "weight": 0.08,
+            "low": 0.0,
+            "high": 1.1,
+            "target": 1.25
+          },
+          {
+            "feature": "large_component_ratio",
+            "fn": "ramp",
+            "weight": 0.07,
+            "low": 0.02,
+            "high": 0.16
+          }
+        ]
+      },
+      {
+        "key": "device",
+        "en_label": "device",
+        "cn_label": "???",
+        "keywords": [
+          "??",
+          "??",
+          "??",
+          "???",
+          "device",
+          "hardware",
+          "??",
+          "??"
+        ],
+        "suggested": {
+          "insert_section": "??????",
+          "caption": "???????",
+          "size_policy": "device"
+        },
+        "visual_rules": [
+          {
+            "feature": "colorfulness",
+            "fn": "ramp",
+            "weight": 0.2,
+            "low": 16,
+            "high": 70
+          },
+          {
+            "feature": "light_bg_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.18,
+            "low": 0.25,
+            "high": 0.7
+          },
+          {
+            "feature": "edge_density",
+            "fn": "band",
+            "weight": 0.16,
+            "low": 0.015,
+            "ideal_low": 0.04,
+            "ideal_high": 0.16,
+            "high": 0.28
+          },
+          {
+            "feature": "line_count",
+            "fn": "inverse_ramp",
+            "weight": 0.12,
+            "low": 120,
+            "high": 260
+          },
+          {
+            "feature": "highlight_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.1,
+            "low": 0.05,
+            "high": 0.18
+          },
+          {
+            "feature": "abs_ar_diff",
+            "fn": "inverse_ramp",
+            "weight": 0.1,
+            "low": 0.0,
+            "high": 1.0,
+            "target": 1.2
+          },
+          {
+            "feature": "large_component_ratio",
+            "fn": "ramp",
+            "weight": 0.08,
+            "low": 0.01,
+            "high": 0.16
+          },
+          {
+            "feature": "width",
+            "fn": "ramp",
+            "weight": 0.06,
+            "low": 300,
+            "high": 1200
+          }
+        ]
+      },
+      {
+        "key": "document",
+        "en_label": "document",
+        "cn_label": "??/??",
+        "keywords": [
+          "???",
+          "??",
+          "??",
+          "??",
+          "doc",
+          "document"
+        ],
+        "suggested": {
+          "insert_section": "??????",
+          "caption": "??/??",
+          "size_policy": "other"
+        },
+        "visual_rules": [
+          {
+            "feature": "light_bg_ratio",
+            "fn": "ramp",
+            "weight": 0.22,
+            "low": 0.35,
+            "high": 0.85
+          },
+          {
+            "feature": "colorfulness",
+            "fn": "inverse_ramp",
+            "weight": 0.18,
+            "low": 10,
+            "high": 35
+          },
+          {
+            "feature": "small_component_ratio",
+            "fn": "ramp",
+            "weight": 0.2,
+            "low": 0.45,
+            "high": 0.9
+          },
+          {
+            "feature": "component_density",
+            "fn": "ramp",
+            "weight": 0.12,
+            "low": 5,
+            "high": 60
+          },
+          {
+            "feature": "long_line_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.1,
+            "low": 0.05,
+            "high": 0.35
+          },
+          {
+            "feature": "edge_density",
+            "fn": "band",
+            "weight": 0.1,
+            "low": 0.003,
+            "ideal_low": 0.01,
+            "ideal_high": 0.08,
+            "high": 0.18
+          },
+          {
+            "feature": "highlight_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.08,
+            "low": 0.01,
+            "high": 0.08
+          }
+        ]
+      },
+      {
+        "key": "chart",
+        "en_label": "chart",
+        "cn_label": "??/??",
+        "keywords": [
+          "??",
+          "??",
+          "??",
+          "??",
+          "plot",
+          "chart",
+          "scope",
+          "??",
+          "bode"
+        ],
+        "suggested": {
+          "insert_section": "??????",
+          "caption": "??/??",
+          "size_policy": "chart"
+        },
+        "visual_rules": [
+          {
+            "feature": "light_bg_ratio",
+            "fn": "ramp",
+            "weight": 0.18,
+            "low": 0.35,
+            "high": 0.85
+          },
+          {
+            "feature": "line_count",
+            "fn": "band",
+            "weight": 0.16,
+            "low": 4,
+            "ideal_low": 12,
+            "ideal_high": 70,
+            "high": 160
+          },
+          {
+            "feature": "edge_density",
+            "fn": "band",
+            "weight": 0.14,
+            "low": 0.006,
+            "ideal_low": 0.015,
+            "ideal_high": 0.08,
+            "high": 0.16
+          },
+          {
+            "feature": "long_line_ratio",
+            "fn": "ramp",
+            "weight": 0.14,
+            "low": 0.02,
+            "high": 0.25
+          },
+          {
+            "feature": "small_component_ratio",
+            "fn": "inverse_ramp",
+            "weight": 0.12,
+            "low": 0.55,
+            "high": 0.9
+          },
+          {
+            "feature": "max_hl_vl",
+            "fn": "ramp",
+            "weight": 0.1,
+            "low": 2,
+            "high": 18
+          },
+          {
+            "feature": "colorfulness",
+            "fn": "band",
+            "weight": 0.1,
+            "low": 2,
+            "ideal_low": 6,
+            "ideal_high": 55,
+            "high": 120
+          },
+          {
+            "feature": "abs_ar_diff",
+            "fn": "inverse_ramp",
+            "weight": 0.06,
+            "low": 0.0,
+            "high": 1.1,
+            "target": 1.45
+          }
+        ]
+      }
+    ],
+    "thresholds": {
+      "confidence": 0.55,
+      "visual_only_confidence": 0.4,
+      "margin": 0.08
+    }
+  }
+}
