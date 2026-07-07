@@ -11,6 +11,13 @@ def disable_env_llm_for_offline_tests(monkeypatch):
         "LLM_MODEL",
         "LLM_TIMEOUT",
         "LLM_TEMPERATURE",
+        "VISION_RECOGNITION_REVIEW_THRESHOLD",
+        "VISION_RECOGNITION_TEMPERATURE",
+        "VISION_RECOGNITION_TIMEOUT",
+        "VISION_RECOGNITION_ENABLED",
+        "LLM_SEND_TEMPERATURE",
+        "LLM_STREAM",
+        "TABLE_FEATURE_ENABLED",
     ]:
         monkeypatch.delenv(name, raising=False)
     os.environ["LLM_DISABLE_FOR_TESTS"] = "1"

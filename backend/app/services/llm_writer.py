@@ -33,6 +33,8 @@ class LLMConfig:
     model: str
     timeout: int = 180
     temperature: float = 0.2
+    stream: bool = False
+    send_temperature: bool = True
 
     @classmethod
     def from_env(cls) -> "LLMConfig | None":
@@ -48,6 +50,8 @@ class LLMConfig:
             model=model,
             timeout=int(os.getenv("LLM_TIMEOUT", "180")),
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.2")),
+            stream=_env_bool("LLM_STREAM"),
+            send_temperature=_env_bool("LLM_SEND_TEMPERATURE", default=True),
         )
 
 
@@ -63,13 +67,16 @@ def generate_report_sections(
     user_prompt = _user_prompt(metadata, guide_text, report_text, image_names)
     payload = {
         "model": config.model,
-        "temperature": config.temperature,
         "messages": [
             {"role": "system", "content": _system_prompt()},
             {"role": "user", "content": user_prompt},
         ],
     }
-    url = f"{config.base_url}/chat/completions"
+    if config.send_temperature:
+        payload["temperature"] = config.temperature
+    if config.stream:
+        payload["stream"] = True
+    url = _chat_completions_url(config.base_url)
     logger.info(
         "llm request start model=%s url=%s timeout=%s guide_chars=%s report_chars=%s image_count=%s prompt_chars=%s",
         config.model,
@@ -83,15 +90,27 @@ def generate_report_sections(
 
     started_at = time.monotonic()
     try:
-        response = post(
-            url,
-            headers={
-                "Authorization": f"Bearer {config.api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=config.timeout,
-        )
+        if config.stream:
+            response = post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {config.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=config.timeout,
+                stream=True,
+            )
+        else:
+            response = post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {config.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=config.timeout,
+            )
     except RequestException as exc:
         elapsed = time.monotonic() - started_at
         raise RuntimeError(f"模型 API 连接失败或超时，耗时 {elapsed:.1f}s：{exc}") from exc
@@ -102,16 +121,83 @@ def generate_report_sections(
         body = getattr(response, "text", "")
         raise RuntimeError(f"模型 API 请求失败：{exc}; {body[:800]}") from exc
 
-    content = response.json()["choices"][0]["message"]["content"]
+    content = _response_content(response, stream=config.stream)
     logger.info("llm response received elapsed=%.1fs chars=%s", time.monotonic() - started_at, len(content))
     logger.info("llm raw response chars=%s content=%s", len(content), _log_excerpt(content))
     return normalize_report_draft(_parse_json_content(content), metadata=metadata, image_names=image_names)
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _chat_completions_url(base_url: str) -> str:
+    normalized = _normalize_base_url(base_url)
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    return f"{normalized}/chat/completions"
+
+
+def _response_content(response, *, stream: bool) -> str:
+    if not stream:
+        return response.json()["choices"][0]["message"]["content"]
+    chunks: list[str] = []
+    pending = ""
+    for line in response.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+        if isinstance(line, bytes):
+            line = line.decode("utf-8", errors="ignore")
+        text = str(line).strip()
+        if text.startswith("data:"):
+            text = text[5:].strip()
+        if text == "[DONE]":
+            break
+        if not text:
+            continue
+        if pending:
+            text = pending + text
+            pending = ""
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            if _looks_like_incomplete_json(exc):
+                pending = text
+                continue
+            logger.warning("llm stream chunk ignored invalid_json=%s text=%s", exc, text[:300])
+            continue
+        choices = data.get("choices") or []
+        if not choices:
+            continue
+        delta = choices[0].get("delta") or {}
+        message = choices[0].get("message") or {}
+        piece = delta.get("content") if "content" in delta else message.get("content")
+        if piece:
+            chunks.append(str(piece))
+    if pending:
+        logger.warning("llm stream ended with incomplete json text=%s", pending[:300])
+    return "".join(chunks)
+
+
+def _looks_like_incomplete_json(exc: json.JSONDecodeError) -> bool:
+    message = str(exc)
+    return (
+        "Unterminated string" in message
+        or "Expecting value" in message
+        or "Expecting ',' delimiter" in message
+        or "Expecting property name enclosed in double quotes" in message
+    )
 
 
 def _normalize_base_url(value: str) -> str:
     base_url = value.strip().rstrip("/")
     if base_url == "https://api.deepseek.com":
         return "https://api.deepseek.com/v1"
+    if base_url == "https://node-hk.sssaicodeapi.com/api":
+        return "https://node-hk.sssaicodeapi.com/api/v1"
     return base_url
 
 

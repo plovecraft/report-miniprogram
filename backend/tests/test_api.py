@@ -1,3 +1,4 @@
+import re
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -68,6 +69,19 @@ def create_preview_ready_ai_task(client: TestClient) -> str:
     )
     generate_task_preview(task_id)
     return task_id
+
+
+def test_health_includes_runtime_summary() -> None:
+    client = TestClient(app)
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert "runtime" in body
+    assert "tableFeatureEnabled" in body["runtime"]
+    assert "visionRecognitionEnabled" in body["runtime"]
 
 
 def test_report_task_uploads_previews_confirms_and_downloads_revised_docx(tmp_path: Path) -> None:
@@ -1121,3 +1135,17 @@ def test_external_image_classifier_hook_is_used_in_preview(monkeypatch, tmp_path
     assert plan[0]["type"] == "wiring"
     assert plan[0]["section"] == "四、实验操作过程"
     assert plan[0]["caption"] == "外部识别接线图"
+
+
+def test_create_task_returns_readable_time_based_task_id(tmp_path: Path) -> None:
+    task_store.reset(tmp_path / "tasks")
+    client = TestClient(app)
+
+    first = client.post("/api/reports/tasks", json={"experimentNo": "Experiment 1", "imageCount": 0}).json()["taskId"]
+    second = client.post("/api/reports/tasks", json={"experimentNo": "Experiment 2", "imageCount": 0}).json()["taskId"]
+
+    assert re.match(r"^task-\d{8}-\d{6}-[0-9a-f]{4}$", first)
+    assert re.match(r"^task-\d{8}-\d{6}-[0-9a-f]{4}$", second)
+    assert first != second
+    assert task_store.get_task(first) is not None
+    assert (tmp_path / "tasks" / first).exists()

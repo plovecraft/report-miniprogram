@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import time
 import uuid
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
@@ -108,13 +109,20 @@ class TaskStore:
             self.tasks = {}
 
     def create_task(self, metadata: dict[str, Any], user_id: str | None = None) -> TaskRecord:
-        task_id = uuid.uuid4().hex
-        record = TaskRecord(task_id=task_id, metadata=metadata, root_dir=self.storage_root / task_id, user_id=user_id)
-        record.upload_dir.mkdir(parents=True, exist_ok=True)
-        record.output_dir.mkdir(parents=True, exist_ok=True)
         with self._lock:
+            task_id = self._new_task_id()
+            while task_id in self.tasks or (self.storage_root / task_id).exists():
+                task_id = self._new_task_id()
+            record = TaskRecord(task_id=task_id, metadata=metadata, root_dir=self.storage_root / task_id, user_id=user_id)
+            record.upload_dir.mkdir(parents=True, exist_ok=True)
+            record.output_dir.mkdir(parents=True, exist_ok=True)
             self.tasks[task_id] = record
         return record
+
+    def _new_task_id(self) -> str:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        suffix = uuid.uuid4().hex[:4]
+        return f"task-{timestamp}-{suffix}"
 
     def get_task(self, task_id: str) -> TaskRecord | None:
         with self._lock:

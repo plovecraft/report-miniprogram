@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config'
+import { API_BASE_URL, CLOUDBASE_HTTP_BASE_URL, USE_CLOUDBASE_HTTP } from '../config'
 
 export type TaskStatus = 'queued' | 'uploading' | 'previewing' | 'preview_ready' | 'processing' | 'done' | 'failed'
 
@@ -228,8 +228,20 @@ type RequestMethod = 'GET' | 'POST' | 'PATCH'
 const AUTH_TOKEN_STORAGE_KEY = 'lab_report_auth_token_v1'
 const DEV_OPENID_STORAGE_KEY = 'lab_report_dev_openid_v1'
 
+export class ApiError extends Error {
+  statusCode: number
+  detail: string
+
+  constructor(statusCode: number, detail: string) {
+    super(detail || `后端返回 ${statusCode}`)
+    this.statusCode = statusCode
+    this.detail = detail
+  }
+}
+
 function normalizeBaseUrl() {
-  return API_BASE_URL.replace(/\/$/, '')
+  const baseUrl = USE_CLOUDBASE_HTTP && CLOUDBASE_HTTP_BASE_URL ? CLOUDBASE_HTTP_BASE_URL : API_BASE_URL
+  return baseUrl.replace(/\/$/, '')
 }
 
 function getAuthToken() {
@@ -280,7 +292,7 @@ function request<T>(path: string, method: RequestMethod, data?: object): Promise
           resolve(res.data as T)
           return
         }
-        reject(new Error(`后端返回 ${res.statusCode}`))
+        reject(new ApiError(res.statusCode, responseErrorDetail(res.data, `后端返回 ${res.statusCode}`)))
       },
       fail(err) {
         reject(new Error(err.errMsg || '无法连接后端服务'))
@@ -319,7 +331,7 @@ export function ensureWechatLogin(): Promise<void> {
               resolve()
               return
             }
-            reject(new Error(`登录失败：${res.statusCode}`))
+            reject(new ApiError(res.statusCode, responseErrorDetail(res.data, `登录失败：${res.statusCode}`)))
           },
           fail(err) {
             reject(new Error(err.errMsg || '无法连接登录接口'))
@@ -331,6 +343,19 @@ export function ensureWechatLogin(): Promise<void> {
       },
     })
   })
+}
+
+function responseErrorDetail(data: any, fallback: string): string {
+  if (data && typeof data === 'object') {
+    const detail = data.detail
+    if (typeof detail === 'string' && detail) {
+      return detail
+    }
+    if (detail && typeof detail === 'object') {
+      return JSON.stringify(detail)
+    }
+  }
+  return fallback
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {

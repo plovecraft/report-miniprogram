@@ -4,9 +4,11 @@ from pathlib import Path
 from backend.app.services.docx_builder import (
     apply_table_edits_to_layout_plan,
     apply_table_selection_to_layout_plan,
+    build_table_audit_report,
     build_preview_layout_plan,
     build_report_preview,
     extract_table_preview_summary,
+    get_effective_preview_layout_plan,
     run_pre_generation_shadow_gate,
 )
 from backend.app.services.layout_validator import validate_layout_plan
@@ -84,7 +86,68 @@ def test_build_preview_layout_plan_injects_table_blocks(tmp_path: Path) -> None:
         if block["type"] == "table"
     ]
     assert table_blocks
-    assert any(block["schema"] == "io_assignment_table" for block in table_blocks)
+
+
+def test_table_feature_disabled_hides_table_plan_and_blocks(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TABLE_FEATURE_ENABLED", "0")
+    record = _build_record(tmp_path)
+
+    preview = build_report_preview(record)
+
+    blocks = [
+        block
+        for section in record.preview_layout_plan["sections"]
+        for block in section.get("blocks", [])
+    ]
+    assert preview["tablePlan"] == []
+    assert not [block for block in blocks if block.get("type") == "table"]
+
+
+def test_table_feature_disabled_strips_effective_layout_plan(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TABLE_FEATURE_ENABLED", "0")
+    record = _build_record(tmp_path)
+    record.preview_layout_plan = {
+        "schemaVersion": "layout-plan.v1",
+        "sections": [
+            {
+                "key": "result",
+                "title": "实验结果",
+                "blocks": [
+                    {"type": "paragraph", "text": "keep"},
+                    {
+                        "type": "table",
+                        "tableId": "table_0",
+                        "schema": "io_assignment_table",
+                        "title": "I/O 分配表",
+                        "data": {"rows": [["输入", "I0.0", "启动按钮", "启动"]]},
+                    },
+                ],
+            }
+        ],
+    }
+
+    effective = get_effective_preview_layout_plan(record)
+
+    blocks = effective["sections"][0]["blocks"]
+    assert [block["type"] for block in blocks] == ["paragraph"]
+
+
+def test_table_feature_disabled_audit_marks_disabled(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TABLE_FEATURE_ENABLED", "0")
+    record = _build_record(tmp_path)
+
+    audit = build_table_audit_report(
+        record,
+        effective_layout_plan={
+            "schemaVersion": "layout-plan.v1",
+            "sections": [{"key": "result", "title": "实验结果", "blocks": []}],
+        },
+        executor_report={"writtenTables": 0, "tableRows": 0, "fallbackUsed": False},
+    )
+
+    assert audit["plannedTables"] == []
+    assert audit["summary"]["disabled"] is True
+    assert audit["summary"]["plannedCount"] == 0
 
 
 def test_preview_layout_plan_with_auto_table_validates(tmp_path: Path) -> None:

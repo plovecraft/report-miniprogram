@@ -9,6 +9,8 @@ import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
+from . import vision_image_recognizer
+
 
 CONFIG_ROOT = Path(__file__).resolve().parents[1] / "configs" / "experiment_types"
 
@@ -80,6 +82,14 @@ def recognize_image_file(
             image_ref=image_ref,
             image_index=image_index,
         )
+    vision_result = vision_image_recognizer.recognize_image_file_with_vision(
+        image_path,
+        experiment_type=normalized_type,
+        image_ref=image_ref,
+        image_index=image_index,
+    )
+    if vision_result is not None:
+        return vision_result
     return _classify_array(
         bgr,
         filename=image_path.name,
@@ -136,6 +146,15 @@ def recognize_image_bytes(
             image_ref=image_ref,
             image_index=image_index,
         )
+    vision_result = vision_image_recognizer.recognize_image_bytes_with_vision(
+        image_bytes,
+        filename,
+        experiment_type=normalized_type,
+        image_ref=image_ref,
+        image_index=image_index,
+    )
+    if vision_result is not None:
+        return vision_result
     return _classify_array(
         bgr,
         filename=filename,

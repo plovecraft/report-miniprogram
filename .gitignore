@@ -3,6 +3,7 @@
 .deploy_*
 .deploy_plc_report
 .deploy_plc_report.pub
+服务器密钥/
 
 # backend runtime state
 backend/.env

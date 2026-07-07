@@ -969,3 +969,52 @@ def test_ai_invalid_candidate_hides_comparison() -> None:
     assert summary["status"] == "invalid"
     assert summary["validationPassed"] is False
     assert summary["comparison"] is None
+
+
+class _FakeStreamAIResponse:
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_lines(self, decode_unicode: bool = False):
+        lines = [
+            'data: {"choices":[{"delta":{"content":"{\\\"schemaVersion\\\":1,\\\"experimentType\\\":\\\"plc\\\",\\\"sections\\\":["}}]}',
+            'data: {"choices":[{"delta":{"content":"{\\\"key\\\":\\\"s1\\\",\\\"title\\\":\\\"AI\\\",\\\"blocks\\\":[{\\\"type\\\":\\\"paragraph\\\",\\\"content\\\":\\\"ok\\\"}]}],\\\"warnings\\\":[]}"}}]}',
+            'data: [DONE]',
+        ]
+        for line in lines:
+            yield line if decode_unicode else line.encode("utf-8")
+
+
+def test_ai_planner_uses_streaming_compatible_request(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        "backend.app.services.ai_layout_planner.LLMConfig.from_env",
+        lambda: LLMConfig(
+            base_url="https://node-hk.sssaicodeapi.com/api",
+            api_key="test-key",
+            model="demo-model",
+            stream=True,
+            send_temperature=False,
+        ),
+    )
+
+    def fake_post(url, headers, json, timeout, stream):
+        calls.append({"url": url, "json": json, "stream": stream})
+        return _FakeStreamAIResponse()
+
+    monkeypatch.setattr("backend.app.services.ai_layout_planner.requests.post", fake_post)
+
+    result = generate_ai_layout_plan_candidate(
+        metadata={"experimentNo": "Experiment 3"},
+        experiment_type="plc",
+        guide_text="guide",
+        report_text="report",
+        image_plan=[],
+        table_plan=[],
+        current_layout_plan=_base_rule_plan(),
+    )
+
+    assert calls[0]["url"] == "https://node-hk.sssaicodeapi.com/api/v1/chat/completions"
+    assert calls[0]["stream"] is True
+    assert "temperature" not in calls[0]["json"]
+    assert result["ok"] is True

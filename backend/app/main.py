@@ -30,6 +30,7 @@ from .services.image_classifier import classify_image_info, image_categories_by_
 from .services.llm_writer import LLMConfig
 from .services.material_package import extract_material_package
 from .services.quality_checker import build_quality_report
+from .services.runtime_config import runtime_summary
 from .services.task_store import TaskRecord, TaskStore
 from .services.user_store import UserStore
 
@@ -84,7 +85,7 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict[str, Any]:
     llm_config = LLMConfig.from_env()
-    body: dict[str, Any] = {"status": "ok", "llmConfigured": llm_config is not None}
+    body: dict[str, Any] = {"status": "ok", "llmConfigured": llm_config is not None, "runtime": runtime_summary()}
     if llm_config is not None:
         body["llmBaseUrl"] = llm_config.base_url
         body["llmModel"] = llm_config.model

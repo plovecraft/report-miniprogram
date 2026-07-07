@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 from copy import deepcopy
 from datetime import datetime
@@ -55,6 +56,25 @@ IMAGE_OVERRIDE_CATEGORIES = {
     "instrument",
     "unknown",
 }
+
+
+
+def table_feature_enabled() -> bool:
+    raw = os.getenv("TABLE_FEATURE_ENABLED", "1").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def strip_table_blocks_from_layout_plan(layout_plan: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(layout_plan, dict):
+        return None
+    copied = deepcopy(layout_plan)
+    for section in copied.get("sections") or []:
+        if not isinstance(section, dict):
+            continue
+        blocks = section.get("blocks")
+        if isinstance(blocks, list):
+            section["blocks"] = [block for block in blocks if not (isinstance(block, dict) and block.get("type") == "table")]
+    return copied
 
 IMAGE_OVERRIDE_SIZE_POLICIES = {
     "program",
@@ -245,6 +265,8 @@ def get_selected_preview_layout_plan(record: TaskRecord) -> dict[str, Any] | Non
         layout_plan = record.adopted_ai_layout_plan
     else:
         layout_plan = record.preview_layout_plan if isinstance(record.preview_layout_plan, dict) else None
+    if not table_feature_enabled():
+        return strip_table_blocks_from_layout_plan(layout_plan)
     return _merge_manual_tables_into_layout_plan(layout_plan, record.manual_tables)
 
 
@@ -252,6 +274,8 @@ def get_effective_preview_layout_plan(record: TaskRecord) -> dict[str, Any] | No
     layout_plan = get_selected_preview_layout_plan(record)
     if layout_plan is None:
         return None
+    if not table_feature_enabled():
+        return strip_table_blocks_from_layout_plan(layout_plan)
     return _apply_table_controls_to_layout_plan(
         layout_plan,
         record.table_edits,
@@ -326,6 +350,26 @@ def build_table_audit_report(
     effective_layout_plan: dict[str, Any] | None = None,
     executor_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if not table_feature_enabled():
+        executor = _normalize_layout_executor_report(executor_report)
+        return {
+            "plannedTables": [],
+            "layoutPlanSource": str(record.layout_plan_source or "rule"),
+            "summary": {
+                "plannedCount": 0,
+                "selectedCount": 0,
+                "unselectedCount": 0,
+                "editedCount": 0,
+                "manualCount": 0,
+                "writtenTables": int(executor.get("writtenTables") or 0),
+                "tableRows": int(executor.get("tableRows") or 0),
+                "legacyFallback": bool(executor.get("fallbackUsed")),
+                "layoutPlanSource": str(record.layout_plan_source or "rule"),
+                "disabled": True,
+            },
+            "warnings": list(executor.get("warnings") or []),
+            "errors": list(executor.get("errors") or []),
+        }
     original_layout_plan = get_selected_preview_layout_plan(record) or (
         record.preview_layout_plan if isinstance(record.preview_layout_plan, dict) else None
     )
@@ -410,7 +454,7 @@ def build_report_preview(record: TaskRecord) -> dict:
         guide_text=guide_text,
         report_text=report_text,
     )
-    preview["tablePlan"] = extract_table_preview_summary(
+    preview["tablePlan"] = [] if not table_feature_enabled() else extract_table_preview_summary(
         get_selected_preview_layout_plan(record) or record.preview_layout_plan,
         record.table_selection,
         record.table_edits,
@@ -470,13 +514,16 @@ def build_preview_layout_plan(
     if image_plan is not None:
         preview["imagePlan"] = image_plan
     layout_plan = build_layout_plan_from_preview(preview)
-    layout_plan = inject_planned_tables(
-        layout_plan,
-        experiment_type=str((experiment_config.experiment_type if experiment_config is not None else preview.get("experimentType")) or "plc"),
-        guide_text=guide_text,
-        report_text=report_text,
-        image_plan=preview.get("imagePlan"),
-    )
+    if table_feature_enabled():
+        layout_plan = inject_planned_tables(
+            layout_plan,
+            experiment_type=str((experiment_config.experiment_type if experiment_config is not None else preview.get("experimentType")) or "plc"),
+            guide_text=guide_text,
+            report_text=report_text,
+            image_plan=preview.get("imagePlan"),
+        )
+    else:
+        layout_plan = strip_table_blocks_from_layout_plan(layout_plan) or layout_plan
     _assign_table_ids(layout_plan)
     validate_layout_plan(layout_plan, _valid_preview_image_indices(preview))
     return layout_plan

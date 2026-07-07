@@ -9,7 +9,7 @@ import requests
 from requests import HTTPError, RequestException
 
 from .layout_validator import LayoutValidationError, validate_layout_plan
-from .llm_writer import LLMConfig
+from .llm_writer import LLMConfig, _chat_completions_url, _response_content
 
 
 logger = logging.getLogger("report-backend.ai-layout-planner")
@@ -40,7 +40,6 @@ def generate_ai_layout_plan_candidate(
     try:
         payload = {
             "model": config.model,
-            "temperature": 0.1,
             "messages": [
                 {"role": "system", "content": _system_prompt()},
                 {
@@ -57,17 +56,24 @@ def generate_ai_layout_plan_candidate(
                 },
             ],
         }
-        response = requests.post(
-            f"{config.base_url}/chat/completions",
-            headers={
+        if config.send_temperature:
+            payload["temperature"] = 0.1
+        if config.stream:
+            payload["stream"] = True
+        url = _chat_completions_url(config.base_url)
+        request_kwargs = {
+            "headers": {
                 "Authorization": f"Bearer {config.api_key}",
                 "Content-Type": "application/json",
             },
-            json=payload,
-            timeout=config.timeout,
-        )
+            "json": payload,
+            "timeout": config.timeout,
+        }
+        if config.stream:
+            request_kwargs["stream"] = True
+        response = requests.post(url, **request_kwargs)
         response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
+        content = _response_content(response, stream=config.stream)
         candidate = normalize_ai_layout_plan_candidate(_parse_json_content(content))
         validation = _validate_candidate(candidate, image_plan)
         comparison = compare_layout_plans(current_layout_plan, candidate) if validation["passed"] else None

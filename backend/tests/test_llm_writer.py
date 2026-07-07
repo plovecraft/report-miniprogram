@@ -194,3 +194,81 @@ def test_logs_raw_llm_response_for_debugging(caplog) -> None:
 
     assert "llm raw response" in caplog.text
     assert "模型回复调试标记" in caplog.text
+
+
+class FakeStreamResponse:
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_lines(self, decode_unicode: bool = False):
+        lines = [
+            'data: {"choices":[{"delta":{"content":"{\\\"experiment_result\\\":["}}]}',
+            'data: {"choices":[{"delta":{"content":"\\\"stream ok\\\"]}"}}]}',
+            'data: [DONE]',
+        ]
+        for line in lines:
+            yield line if decode_unicode else line.encode('utf-8')
+
+
+def test_streaming_writer_parses_sse_chunks_without_temperature() -> None:
+    calls = []
+
+    def fake_post(url, headers, json, timeout, stream):
+        calls.append({"url": url, "json": json, "stream": stream})
+        return FakeStreamResponse()
+
+    draft = generate_report_sections(
+        config=LLMConfig(
+            base_url="https://node-hk.sssaicodeapi.com/api",
+            api_key="test-key",
+            model="demo-model",
+            stream=True,
+            send_temperature=False,
+        ),
+        metadata={"experimentNo": "test"},
+        guide_text="guide",
+        report_text="report",
+        image_names=[],
+        post=fake_post,
+    )
+
+    assert calls[0]["url"] == "https://node-hk.sssaicodeapi.com/api/v1/chat/completions"
+    assert calls[0]["stream"] is True
+    assert "temperature" not in calls[0]["json"]
+    assert any(lines == ["stream ok"] for _, lines in draft.sections)
+
+
+class SplitStreamResponse:
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_lines(self, decode_unicode: bool = False):
+        lines = [
+            'data: {"choices":[{"delta":{"content":"{\\\"experiment_result\\\":[',
+            '\\\"split ok\\\"]}"}}]}',
+            'data: [DONE]',
+        ]
+        for line in lines:
+            yield line if decode_unicode else line.encode("utf-8")
+
+
+def test_streaming_writer_buffers_split_json_chunks() -> None:
+    def fake_post(url, headers, json, timeout, stream):
+        return SplitStreamResponse()
+
+    draft = generate_report_sections(
+        config=LLMConfig(
+            base_url="https://example.test/v1",
+            api_key="test-key",
+            model="demo-model",
+            stream=True,
+            send_temperature=False,
+        ),
+        metadata={"experimentNo": "test"},
+        guide_text="guide",
+        report_text="report",
+        image_names=[],
+        post=fake_post,
+    )
+
+    assert any(lines == ["split ok"] for _, lines in draft.sections)

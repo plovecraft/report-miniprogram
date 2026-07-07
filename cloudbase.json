@@ -1,0 +1,25 @@
+{
+  "version": "2.0",
+  "envId": "prod-d3gn7yz2311f3f9ce",
+  "framework": {
+    "name": "report-miniprogram-backend",
+    "plugins": {
+      "client": {
+        "use": "@cloudbase/framework-plugin-container",
+        "inputs": {
+          "serviceName": "flask-5pvg",
+          "servicePath": "/",
+          "localPath": ".",
+          "cpu": 1,
+          "mem": 2,
+          "minNum": 0,
+          "maxNum": 2,
+          "policyType": "cpu",
+          "policyThreshold": 60,
+          "containerPort": 8000,
+          "dockerfilePath": "Dockerfile"
+        }
+      }
+    }
+  }
+}
