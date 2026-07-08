@@ -60,7 +60,7 @@ IMAGE_OVERRIDE_CATEGORIES = {
 
 
 def table_feature_enabled() -> bool:
-    raw = os.getenv("TABLE_FEATURE_ENABLED", "1").strip().lower()
+    raw = os.getenv("TABLE_FEATURE_ENABLED", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
 
 

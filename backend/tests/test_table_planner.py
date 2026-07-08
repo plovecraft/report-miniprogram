@@ -70,3 +70,28 @@ def test_table_planner_limits_auto_tables() -> None:
     )
 
     assert len(tables) <= 2
+
+
+def test_table_planner_extracts_io_rows_from_guide_text() -> None:
+    tables = plan_tables_for_preview(
+        experiment_type="plc",
+        guide_text="I/O分配：I0.0 启动按钮；Q0.0 运行指示灯。",
+    )
+
+    io_table = next(block for block in tables if block["schema"] == "io_assignment_table")
+
+    assert io_table["data"]["rows"] == [
+        ["输入", "I0.0", "启动按钮", "控制系统启动"],
+        ["输出", "Q0.0", "运行指示灯", "显示运行状态"],
+    ]
+
+
+def test_table_planner_does_not_insert_hardcoded_io_rows_without_addresses() -> None:
+    tables = plan_tables_for_preview(
+        experiment_type="plc",
+        guide_text="本实验需要完成I/O分配，但指导书未列出具体地址。",
+    )
+
+    io_table = next(block for block in tables if block["schema"] == "io_assignment_table")
+
+    assert io_table["data"]["rows"] == []

@@ -7,6 +7,8 @@ from docx import Document
 from fastapi.testclient import TestClient
 
 from backend.app.main import app, generate_task_output, generate_task_preview, task_store
+from backend.app.services.docx_builder import table_feature_enabled
+from backend.app.services.runtime_config import runtime_summary
 
 
 def make_docx_bytes(text: str) -> bytes:
@@ -82,6 +84,13 @@ def test_health_includes_runtime_summary() -> None:
     assert "runtime" in body
     assert "tableFeatureEnabled" in body["runtime"]
     assert "visionRecognitionEnabled" in body["runtime"]
+
+
+def test_table_feature_defaults_to_disabled_without_env(monkeypatch) -> None:
+    monkeypatch.delenv("TABLE_FEATURE_ENABLED", raising=False)
+
+    assert table_feature_enabled() is False
+    assert runtime_summary()["tableFeatureEnabled"] is False
 
 
 def test_report_task_uploads_previews_confirms_and_downloads_revised_docx(tmp_path: Path) -> None:

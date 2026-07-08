@@ -9,7 +9,7 @@ def runtime_summary() -> dict[str, Any]:
         "cloudbaseRun": bool(os.getenv("K_SERVICE") or os.getenv("TCB_ENV") or os.getenv("CLOUDBASE_ENV_ID")),
         "port": os.getenv("PORT", ""),
         "storageDir": os.getenv("STORAGE_DIR", ""),
-        "tableFeatureEnabled": _env_bool("TABLE_FEATURE_ENABLED", default=True),
+        "tableFeatureEnabled": _env_bool("TABLE_FEATURE_ENABLED", default=False),
         "visionRecognitionEnabled": _env_bool("VISION_RECOGNITION_ENABLED"),
     }
 

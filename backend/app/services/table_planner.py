@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import Any
 
@@ -23,10 +24,11 @@ def plan_tables_for_preview(
     planned: list[dict[str, Any]] = []
 
     if _contains_any(text, IO_KEYWORDS):
+        io_rows = _extract_io_assignment_rows(f"{guide_text}\n{report_text}")
         planned.append(
             _planned_table(
                 "io_assignment_table",
-                [["输入", "I0.0", "启动按钮", "控制系统启动"], ["输出", "Q0.0", "运行指示灯", "显示运行状态"]],
+                io_rows,
                 preview_sections,
             )
         )
@@ -35,7 +37,7 @@ def plan_tables_for_preview(
         planned.append(
             _planned_table(
                 "phenomenon_record_table",
-                [["程序运行", "观察输出状态变化", "基本符合实验要求"]],
+                [],
                 preview_sections,
             )
         )
@@ -44,7 +46,7 @@ def plan_tables_for_preview(
         planned.append(
             _planned_table(
                 "data_record_table",
-                [["1", "实验数据记录", "待填写", "根据实验记录补充"]],
+                [],
                 preview_sections,
             )
         )
@@ -119,6 +121,73 @@ def _planned_table(schema_name: str, rows: list[list[str]], preview_sections: li
 
 def _contains_any(text: str, keywords: list[str]) -> bool:
     return any(keyword.lower() in text for keyword in keywords)
+
+
+def _extract_io_assignment_rows(text: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    seen: set[str] = set()
+    for line in _candidate_lines(text):
+        for match in re.finditer(r"\b([IQXYM][0-9]+(?:\.[0-9]+)?)\b", line, flags=re.IGNORECASE):
+            address = match.group(1).upper()
+            if address in seen:
+                continue
+            seen.add(address)
+            rows.append([
+                _io_type_for_address(address),
+                address,
+                _component_name_from_line(line, address),
+                _function_from_line(line),
+            ])
+    return rows[:20]
+
+
+def _candidate_lines(text: str) -> list[str]:
+    normalized = str(text or "").replace("：", ":")
+    lines = re.split(r"[\r\n；;]+", normalized)
+    return [line.strip() for line in lines if line.strip()]
+
+
+def _io_type_for_address(address: str) -> str:
+    prefix = address[:1].upper()
+    if prefix in {"I", "X"}:
+        return "输入"
+    if prefix in {"Q", "Y"}:
+        return "输出"
+    return "内部"
+
+
+def _component_name_from_line(line: str, address: str) -> str:
+    lower = line.lower()
+    candidates = [
+        ("启动按钮", ["启动按钮", "启动", "start button", "start"]),
+        ("停止按钮", ["停止按钮", "停止", "stop button", "stop"]),
+        ("复位按钮", ["复位按钮", "复位", "reset button", "reset"]),
+        ("按钮", ["按钮", "button"]),
+        ("开关", ["开关", "switch"]),
+        ("传感器", ["传感器", "sensor"]),
+        ("运行指示灯", ["运行指示灯", "指示灯", "indicator light", "lamp"]),
+        ("电机", ["电机", "motor"]),
+        ("蜂鸣器", ["蜂鸣器", "buzzer"]),
+        ("线圈", ["线圈", "coil"]),
+    ]
+    for label, keywords in candidates:
+        if any(keyword.lower() in lower for keyword in keywords):
+            return label
+    without_address = re.sub(re.escape(address), "", line, flags=re.IGNORECASE).strip(" :-，,")
+    return without_address[:24]
+
+
+def _function_from_line(line: str) -> str:
+    lower = line.lower()
+    if any(keyword in lower for keyword in ["启动", "start"]):
+        return "控制系统启动"
+    if any(keyword in lower for keyword in ["停止", "stop"]):
+        return "控制系统停止"
+    if any(keyword in lower for keyword in ["复位", "reset"]):
+        return "复位控制"
+    if any(keyword in lower for keyword in ["指示", "显示", "indicator", "lamp"]):
+        return "显示运行状态"
+    return ""
 
 
 def _has_phenomenon_image(image_plan: list | None) -> bool:

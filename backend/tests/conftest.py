@@ -20,6 +20,7 @@ def disable_env_llm_for_offline_tests(monkeypatch):
         "TABLE_FEATURE_ENABLED",
     ]:
         monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("TABLE_FEATURE_ENABLED", "1")
     os.environ["LLM_DISABLE_FOR_TESTS"] = "1"
     yield
     os.environ.pop("LLM_DISABLE_FOR_TESTS", None)
