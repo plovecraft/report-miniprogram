@@ -4,12 +4,19 @@ import os
 from typing import Any
 
 
+def table_feature_enabled_from_env() -> bool:
+    return _env_bool("TABLE_FEATURE_ENABLED", default=False) and _env_bool("ALLOW_UNSTABLE_TABLE_FEATURE", default=False)
+
+
 def runtime_summary() -> dict[str, Any]:
     return {
         "cloudbaseRun": bool(os.getenv("K_SERVICE") or os.getenv("TCB_ENV") or os.getenv("CLOUDBASE_ENV_ID")),
+        "appBuild": os.getenv("APP_BUILD", "local"),
         "port": os.getenv("PORT", ""),
         "storageDir": os.getenv("STORAGE_DIR", ""),
-        "tableFeatureEnabled": _env_bool("TABLE_FEATURE_ENABLED", default=False),
+        "tableFeatureEnabled": table_feature_enabled_from_env(),
+        "tableFeatureRequested": _env_bool("TABLE_FEATURE_ENABLED", default=False),
+        "unstableTableFeatureAllowed": _env_bool("ALLOW_UNSTABLE_TABLE_FEATURE", default=False),
         "visionRecognitionEnabled": _env_bool("VISION_RECOGNITION_ENABLED"),
     }
 

@@ -18,9 +18,11 @@ def disable_env_llm_for_offline_tests(monkeypatch):
         "LLM_SEND_TEMPERATURE",
         "LLM_STREAM",
         "TABLE_FEATURE_ENABLED",
+        "ALLOW_UNSTABLE_TABLE_FEATURE",
     ]:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("TABLE_FEATURE_ENABLED", "1")
+    monkeypatch.setenv("ALLOW_UNSTABLE_TABLE_FEATURE", "1")
     os.environ["LLM_DISABLE_FOR_TESTS"] = "1"
     yield
     os.environ.pop("LLM_DISABLE_FOR_TESTS", None)

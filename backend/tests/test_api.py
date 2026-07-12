@@ -88,9 +88,21 @@ def test_health_includes_runtime_summary() -> None:
 
 def test_table_feature_defaults_to_disabled_without_env(monkeypatch) -> None:
     monkeypatch.delenv("TABLE_FEATURE_ENABLED", raising=False)
+    monkeypatch.delenv("ALLOW_UNSTABLE_TABLE_FEATURE", raising=False)
 
     assert table_feature_enabled() is False
     assert runtime_summary()["tableFeatureEnabled"] is False
+
+
+def test_table_feature_requires_unstable_guard_even_when_requested(monkeypatch) -> None:
+    monkeypatch.setenv("TABLE_FEATURE_ENABLED", "1")
+    monkeypatch.delenv("ALLOW_UNSTABLE_TABLE_FEATURE", raising=False)
+
+    assert table_feature_enabled() is False
+    summary = runtime_summary()
+    assert summary["tableFeatureRequested"] is True
+    assert summary["unstableTableFeatureAllowed"] is False
+    assert summary["tableFeatureEnabled"] is False
 
 
 def test_report_task_uploads_previews_confirms_and_downloads_revised_docx(tmp_path: Path) -> None:

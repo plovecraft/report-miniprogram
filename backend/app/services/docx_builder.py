@@ -39,6 +39,7 @@ from .layout_validator import LayoutValidationError, validate_layout_plan
 from .llm_writer import LLMConfig, ReportDraft, SectionList, generate_report_sections
 from .report_reader import extract_report_text
 from .report_templates import resolve_report_template
+from .runtime_config import table_feature_enabled_from_env
 from .table_planner import inject_planned_tables
 from .table_schema import get_table_schema, validate_table_block
 from .task_store import TaskRecord
@@ -60,8 +61,7 @@ IMAGE_OVERRIDE_CATEGORIES = {
 
 
 def table_feature_enabled() -> bool:
-    raw = os.getenv("TABLE_FEATURE_ENABLED", "0").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return table_feature_enabled_from_env()
 
 
 def strip_table_blocks_from_layout_plan(layout_plan: dict[str, Any] | None) -> dict[str, Any] | None:
