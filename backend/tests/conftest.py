@@ -26,3 +26,11 @@ def disable_env_llm_for_offline_tests(monkeypatch):
     os.environ["LLM_DISABLE_FOR_TESTS"] = "1"
     yield
     os.environ.pop("LLM_DISABLE_FOR_TESTS", None)
+
+
+@pytest.fixture(autouse=True)
+def block_real_requests_in_tests(monkeypatch):
+    import requests
+    def blocked(*args, **kwargs):
+        raise AssertionError("Real outbound requests are forbidden in tests; inject a fake transport")
+    monkeypatch.setattr(requests.sessions.Session, "request", blocked)

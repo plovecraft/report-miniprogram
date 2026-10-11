@@ -1,4 +1,4 @@
-import { createReportTask, ensureWechatLogin, LocalFile, uploadTaskFile } from '../../services/api'
+import { createReportTask, getVisionDisclosure, ensureWechatLogin, LocalFile, uploadTaskFile } from '../../services/api'
 
 const MAX_IMAGE_FILES = 50
 const USER_PROFILE_STORAGE_KEY = 'lab_report_user_profile_v1'
@@ -18,6 +18,10 @@ interface CreatePageData {
   studentName: string
   studentId: string
   className: string
+  visionEnabled: boolean
+  visionAccepted: boolean
+  visionRecipient: string
+  visionVersion: string
   exportPdf: boolean
   submitting: boolean
 }
@@ -74,12 +78,19 @@ Page({
     studentName: '',
     studentId: '',
     className: '',
+    visionEnabled: false,
+    visionAccepted: false,
+    visionRecipient: '',
+    visionVersion: '',
     exportPdf: false,
     submitting: false,
   } as CreatePageData,
 
   onLoad() {
     this.loadUserProfile()
+    getVisionDisclosure().then((info) => this.setData({
+      visionEnabled: info.enabled, visionRecipient: info.recipient, visionVersion: info.version,
+    })).catch(() => this.setData({ visionEnabled: false, visionAccepted: false }))
   },
 
   selectUploadMode(event: WechatMiniprogram.TouchEvent) {
@@ -175,6 +186,10 @@ Page({
         })
       },
     })
+  },
+
+  onVisionConsentChange(event: WechatMiniprogram.SwitchChange) {
+    this.setData({ visionAccepted: event.detail.value })
   },
 
   onExperimentNoInput(event: WechatMiniprogram.Input) {
@@ -320,6 +335,10 @@ Page({
         studentName: this.data.studentName.trim(),
         studentId: this.data.studentId.trim(),
         className: this.data.className.trim(),
+        visionRecognitionConsent: {
+          accepted: this.data.visionEnabled && this.data.visionAccepted,
+          recipient: this.data.visionRecipient, version: this.data.visionVersion,
+        },
         exportPdf: this.data.exportPdf,
         imageCount: this.data.uploadMode === 'zip' ? 0 : this.data.imageFiles.length,
         imageMetas: this.data.uploadMode === 'zip' ? [] : this.data.imageFiles.map((file) => ({

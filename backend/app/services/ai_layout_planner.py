@@ -88,7 +88,7 @@ def generate_ai_layout_plan_candidate(
             "error": None if validation["passed"] else "; ".join(validation["errors"]),
         }
     except (RequestException, HTTPError) as exc:
-        logger.warning("ai layout planner request failed", exc_info=True)
+        logger.warning("ai layout planner request failed error_type=%s", type(exc).__name__)
         return {
             "enabled": True,
             "ok": False,
@@ -96,10 +96,10 @@ def generate_ai_layout_plan_candidate(
             "validation": None,
             "comparison": None,
             "summary": None,
-            "error": f"AI planner request failed: {exc}",
+            "error": "AI planner request failed",
         }
     except Exception as exc:
-        logger.warning("ai layout planner failed", exc_info=True)
+        logger.warning("ai layout planner failed error_type=%s", type(exc).__name__)
         return {
             "enabled": True,
             "ok": False,
@@ -107,7 +107,7 @@ def generate_ai_layout_plan_candidate(
             "validation": None,
             "comparison": None,
             "summary": None,
-            "error": f"AI planner failed: {exc}",
+            "error": "AI planner failed",
         }
 
 

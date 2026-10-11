@@ -51,6 +51,7 @@ def recognize_image_file(
     experiment_type: str = "plc",
     image_ref: str | None = None,
     image_index: int | None = None,
+    allow_external: bool = False,
 ) -> dict[str, Any]:
     normalized_type = normalize_experiment_type(experiment_type)
     try:
@@ -87,6 +88,7 @@ def recognize_image_file(
         experiment_type=normalized_type,
         image_ref=image_ref,
         image_index=image_index,
+        allow_external=allow_external,
     )
     if vision_result is not None:
         return vision_result
@@ -106,6 +108,7 @@ def recognize_image_bytes(
     experiment_type: str = "plc",
     image_ref: str | None = None,
     image_index: int | None = None,
+    allow_external: bool = False,
 ) -> dict[str, Any]:
     normalized_type = normalize_experiment_type(experiment_type)
     if not image_bytes:
@@ -152,6 +155,7 @@ def recognize_image_bytes(
         experiment_type=normalized_type,
         image_ref=image_ref,
         image_index=image_index,
+        allow_external=allow_external,
     )
     if vision_result is not None:
         return vision_result

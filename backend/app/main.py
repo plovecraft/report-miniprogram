@@ -92,6 +92,12 @@ def health() -> dict[str, Any]:
     return body
 
 
+@app.get("/api/privacy/vision")
+def get_vision_disclosure() -> dict[str, Any]:
+    from .services.vision_image_recognizer import vision_disclosure
+    return vision_disclosure()
+
+
 @app.post("/api/auth/wechat-login")
 def wechat_login(payload: dict[str, Any]) -> dict[str, Any]:
     code = str(payload.get("code") or "").strip()
@@ -172,26 +178,23 @@ async def upload_task_file(task_id: str, request: Request) -> dict[str, Any]:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _apply_material_package(record, package)
         logger.info(
-            "material package saved task_id=%s filename=%s report=%s guide=%s images=%s",
+            "material package saved task_id=%s report=%s guide=%s images=%s",
             task_id,
-            filename,
-            record.report_file.name if record.report_file else None,
-            record.guide_file.name if record.guide_file else None,
+            bool(record.report_file),
+            bool(record.guide_file),
             len(record.image_files),
         )
         start_preview_if_ready(record)
         return record.to_response()
 
-    saved_path = task_store.save_upload_bytes(record, field_name, filename, file_content)
+    task_store.save_upload_bytes(record, field_name, filename, file_content)
     logger.info(
-        "file saved task_id=%s field=%s filename=%s bytes=%s uploaded_images=%s/%s path=%s",
+        "file saved task_id=%s field=%s bytes=%s uploaded_images=%s/%s",
         task_id,
         field_name,
-        filename,
         len(file_content),
         len(record.image_files),
         expected_image_count(record),
-        saved_path,
     )
     start_preview_if_ready(record)
     return record.to_response()
@@ -270,9 +273,9 @@ def generate_task_preview(task_id: str) -> None:
             logger.info(
                 "preview started task_id=%s report=%s guide=%s images=%s llm_configured=%s",
                 task_id,
-                record.report_file.name if record.report_file else None,
-                record.guide_file.name if record.guide_file else None,
-                [path.name for path in record.image_files],
+                bool(record.report_file),
+                bool(record.guide_file),
+                len(record.image_files),
                 LLMConfig.from_env() is not None,
             )
             preview_data = build_report_preview(record)
@@ -302,9 +305,9 @@ def generate_task_output(task_id: str) -> None:
             logger.info(
                 "generation started task_id=%s report=%s guide=%s images=%s llm_configured=%s",
                 task_id,
-                record.report_file.name if record.report_file else None,
-                record.guide_file.name if record.guide_file else None,
-                [path.name for path in record.image_files],
+                bool(record.report_file),
+                bool(record.guide_file),
+                len(record.image_files),
                 LLMConfig.from_env() is not None,
             )
             output_file = build_revised_docx(record)
@@ -539,7 +542,12 @@ def update_task_layout_plan_source(task_id: str, payload: dict[str, Any], reques
 
 def expected_inserted_image_count(record: TaskRecord) -> int:
     try:
-        image_plan = build_image_plan(record.image_files, record.metadata)
+        image_plan = (record.preview_data or {}).get("imagePlan")
+        if not isinstance(image_plan, list):
+            # Quality checks must never trigger a new external transfer.
+            metadata = {**record.metadata, "visionRecognitionConsent": None}
+            image_plan = build_image_plan(record.image_files, metadata,
+                                          image_plan_overrides=record.image_plan_overrides)
     except Exception:
         categories = image_categories_by_filename(record.metadata.get("imageMetas"))
         return sum(1 for path in record.image_files if classify_image_info(path.name, categories.get(path.name)) is not None)
