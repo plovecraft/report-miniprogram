@@ -111,19 +111,17 @@ def generate_report_sections(
                 json=payload,
                 timeout=config.timeout,
             )
-    except RequestException as exc:
+    except RequestException:
         elapsed = time.monotonic() - started_at
-        raise RuntimeError(f"模型 API 连接失败或超时，耗时 {elapsed:.1f}s：{exc}") from exc
+        raise RuntimeError(f"模型 API 连接失败或超时，耗时 {elapsed:.1f}s") from None
 
     try:
         response.raise_for_status()
-    except HTTPError as exc:
-        body = getattr(response, "text", "")
-        raise RuntimeError(f"模型 API 请求失败：{exc}; {body[:800]}") from exc
+    except HTTPError:
+        raise RuntimeError("模型 API 请求失败") from None
 
     content = _response_content(response, stream=config.stream)
     logger.info("llm response received elapsed=%.1fs chars=%s", time.monotonic() - started_at, len(content))
-    logger.info("llm raw response chars=%s content=%s", len(content), _log_excerpt(content))
     return normalize_report_draft(_parse_json_content(content), metadata=metadata, image_names=image_names)
 
 
@@ -167,7 +165,7 @@ def _response_content(response, *, stream: bool) -> str:
             if _looks_like_incomplete_json(exc):
                 pending = text
                 continue
-            logger.warning("llm stream chunk ignored invalid_json=%s text=%s", exc, text[:300])
+            logger.warning("llm stream chunk ignored invalid_json")
             continue
         choices = data.get("choices") or []
         if not choices:
@@ -178,7 +176,7 @@ def _response_content(response, *, stream: bool) -> str:
         if piece:
             chunks.append(str(piece))
     if pending:
-        logger.warning("llm stream ended with incomplete json text=%s", pending[:300])
+        logger.warning("llm stream ended with incomplete json")
     return "".join(chunks)
 
 
@@ -199,13 +197,6 @@ def _normalize_base_url(value: str) -> str:
     if base_url == "https://node-hk.sssaicodeapi.com/api":
         return "https://node-hk.sssaicodeapi.com/api/v1"
     return base_url
-
-
-def _log_excerpt(content: str) -> str:
-    limit = int(os.getenv("LLM_RESPONSE_LOG_CHARS", "8000"))
-    if len(content) <= limit:
-        return content
-    return content[:limit] + f"...[truncated {len(content) - limit} chars]"
 
 
 def normalize_report_draft(

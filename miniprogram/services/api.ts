@@ -11,6 +11,7 @@ export interface CreateTaskPayload {
   studentName: string
   studentId: string
   className: string
+  visionRecognitionConsent?: { accepted: boolean; recipient: string; version: string }
   exportPdf: boolean
   imageCount: number
   imageMetas: ImageMeta[]
@@ -468,4 +469,8 @@ export function downloadTaskResult(taskId: string, format: 'docx' | 'pdf' = 'doc
       },
     })
   })
+}
+
+export function getVisionDisclosure(): Promise<{ enabled: boolean; recipient: string; version: string }> {
+  return request('/api/privacy/vision', 'GET')
 }

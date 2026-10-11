@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from .vision_image_recognizer import is_vision_recognition_enabled
+
 
 def table_feature_enabled_from_env() -> bool:
     return _env_bool("TABLE_FEATURE_ENABLED", default=False) and _env_bool("ALLOW_UNSTABLE_TABLE_FEATURE", default=False)
@@ -17,7 +19,8 @@ def runtime_summary() -> dict[str, Any]:
         "tableFeatureEnabled": table_feature_enabled_from_env(),
         "tableFeatureRequested": _env_bool("TABLE_FEATURE_ENABLED", default=False),
         "unstableTableFeatureAllowed": _env_bool("ALLOW_UNSTABLE_TABLE_FEATURE", default=False),
-        "visionRecognitionEnabled": _env_bool("VISION_RECOGNITION_ENABLED"),
+        "visionRecognitionEnabled": is_vision_recognition_enabled(),
+        "visionRecognitionRequested": _env_bool("VISION_RECOGNITION_ENABLED"),
     }
 
 

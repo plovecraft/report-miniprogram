@@ -108,6 +108,14 @@
     </view>
   </view>
 
+  <view class="card" wx:if="{{visionEnabled}}">
+    <view>可选：外部 AI 图片识别（仅本次任务）</view>
+    <view class="muted">同意后，自动分类的实验图片（含 ZIP 中图片）会在预览及重建预览时发送到 {{visionRecipient}}，用于分类和排版。发送完整图片，可能包含人脸、姓名、学号及图片元数据，请先遮挡敏感信息。手动分类和不插入的图片不发送。失败后回退本地识别，已发出的图片无法撤回。</view>
+    <view class="muted">关闭或不同意时使用本地图片识别，仍可生成报告。此选项仅控制图片识别；报告文本生成可能仍使用外部 AI。</view>
+    <view>我同意本次任务按上述说明发送图片</view>
+    <switch checked="{{visionAccepted}}" bindchange="onVisionConsentChange" />
+  </view>
+
   <button class="primary-button submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitTask">
     提交生成
   </button>

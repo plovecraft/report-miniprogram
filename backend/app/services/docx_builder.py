@@ -29,7 +29,7 @@ from .image_classifier import (
     image_metas_by_filename,
     image_width_cm,
 )
-from . import image_recognizer
+from . import image_recognizer, vision_image_recognizer
 from .ai_layout_planner import build_ai_planner_preview_summary, generate_ai_layout_plan_candidate
 from .image_plan_adapter import CATEGORY_DISPLAY, adapt_recognition_to_image_plan
 from .layout_executor import append_layout_plan_content, get_safe_image_caption, normalize_caption_text
@@ -1029,9 +1029,12 @@ def build_image_plan(
                 experiment_type=experiment_type,
                 image_ref=f"image_{image_index}",
                 image_index=image_index,
+                allow_external=vision_image_recognizer.has_vision_consent(metadata or {})
+                and str(((image_plan_overrides or {}).get(f"image_{image_index}") or {}).get("category")
+                        or meta.get("category") or "auto") == "auto",
             )
         except Exception as exc:
-            logger.warning("image recognition failed image=%s", image_file, exc_info=True)
+            logger.warning("image recognition failed error_type=%s", type(exc).__name__)
             recognition = {
                 "schema_version": "image-plan.v1",
                 "experiment_type": "generic",
@@ -1047,7 +1050,7 @@ def build_image_plan(
                 "suggested": {"insert_section": "实验结果", "caption": "待确认图片", "size_policy": "other"},
                 "features": {},
                 "score_detail": {},
-                "error": {"code": "IMAGE_RECOGNITION_FAILED", "message": str(exc)},
+                "error": {"code": "IMAGE_RECOGNITION_FAILED", "message": "Image recognition failed"},
             }
         plan.append(
             adapt_recognition_to_image_plan(
@@ -1271,12 +1274,14 @@ def _recognize_image_for_plan(
     experiment_type: str,
     image_ref: str,
     image_index: int,
+    allow_external: bool = False,
 ) -> dict[str, Any]:
     result = image_recognizer.recognize_image_file(
         path,
         experiment_type=experiment_type,
         image_ref=image_ref,
         image_index=image_index,
+        allow_external=allow_external,
     )
     return result if isinstance(result, dict) else {}
 
@@ -1349,13 +1354,12 @@ def build_report_draft(record: TaskRecord) -> ReportDraft:
         metadata = dict(record.metadata)
         metadata["resolvedExperimentNo"] = experiment_label
         logger.info(
-            "experiment context task_id=%s user_experiment=%s resolved=%s guide_chars=%s selected_guide_chars=%s selected_preview=%r",
+            "experiment context task_id=%s user_experiment=%s resolved=%s guide_chars=%s selected_guide_chars=%s",
             record.task_id,
             record.metadata.get("experimentNo"),
             experiment_label,
             len(full_guide_text),
             len(selected_guide_text),
-            selected_guide_text[:180],
         )
         return generate_report_sections(
             config=config,

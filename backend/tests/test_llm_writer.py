@@ -161,7 +161,7 @@ def json_dumps(value: dict) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def test_logs_raw_llm_response_for_debugging(caplog) -> None:
+def test_logs_response_metrics_without_raw_model_content(caplog) -> None:
     def fake_post(url, headers, json, timeout):
         return FakeResponse(
             {
@@ -192,8 +192,8 @@ def test_logs_raw_llm_response_for_debugging(caplog) -> None:
             post=fake_post,
         )
 
-    assert "llm raw response" in caplog.text
-    assert "模型回复调试标记" in caplog.text
+    assert "llm response received" in caplog.text
+    assert "模型回复调试标记" not in caplog.text
 
 
 class FakeStreamResponse:

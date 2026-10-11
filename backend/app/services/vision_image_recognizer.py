@@ -8,6 +8,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 import requests
 from requests import RequestException
@@ -56,7 +57,32 @@ def is_vision_recognition_enabled() -> bool:
     enabled = os.getenv("VISION_RECOGNITION_ENABLED", "").strip().lower()
     if enabled not in {"1", "true", "yes", "on"}:
         return False
-    return bool(_api_key() and _model())
+    return bool(_api_key() and _model() and vision_recipient())
+
+
+CONSENT_VERSION = "vision-images.v1"
+
+
+def vision_recipient() -> str:
+    try:
+        url = urlsplit(_chat_completions_url())
+    except ValueError:
+        return ""
+    if url.scheme != "https" or not url.hostname or url.username or url.password:
+        return ""
+    return url.netloc
+
+
+def vision_disclosure() -> dict[str, Any]:
+    return {"enabled": is_vision_recognition_enabled(), "recipient": vision_recipient(),
+            "version": CONSENT_VERSION}
+
+
+def has_vision_consent(metadata: dict[str, Any]) -> bool:
+    consent = metadata.get("visionRecognitionConsent")
+    return (isinstance(consent, dict) and consent.get("accepted") is True
+            and consent.get("version") == CONSENT_VERSION
+            and bool(vision_recipient()) and consent.get("recipient") == vision_recipient())
 
 
 def recognize_image_file_with_vision(
@@ -65,8 +91,11 @@ def recognize_image_file_with_vision(
     experiment_type: str = "plc",
     image_ref: str | None = None,
     image_index: int | None = None,
-    post: PostFn = requests.post,
+    allow_external: bool = False,
+    post: PostFn | None = None,
 ) -> dict[str, Any] | None:
+    if allow_external is not True or not is_vision_recognition_enabled():
+        return None
     try:
         image_bytes = image_path.read_bytes()
     except OSError:
@@ -77,6 +106,7 @@ def recognize_image_file_with_vision(
         experiment_type=experiment_type,
         image_ref=image_ref,
         image_index=image_index,
+        allow_external=allow_external,
         post=post,
     )
 
@@ -88,14 +118,16 @@ def recognize_image_bytes_with_vision(
     experiment_type: str = "plc",
     image_ref: str | None = None,
     image_index: int | None = None,
-    post: PostFn = requests.post,
+    allow_external: bool = False,
+    post: PostFn | None = None,
 ) -> dict[str, Any] | None:
-    if not image_bytes or not is_vision_recognition_enabled():
+    if allow_external is not True or not image_bytes or not is_vision_recognition_enabled():
         return None
 
-    payload = _build_payload(image_bytes, filename, experiment_type)
+    post = post or requests.post
     started_url = _chat_completions_url()
     try:
+        payload = _build_payload(image_bytes, filename, experiment_type)
         if _env_bool("LLM_STREAM"):
             response = post(
                 started_url,
@@ -104,6 +136,7 @@ def recognize_image_bytes_with_vision(
                     "Content-Type": "application/json",
                 },
                 json=payload,
+                allow_redirects=False,
                 timeout=int(os.getenv("VISION_RECOGNITION_TIMEOUT", "60")),
                 stream=True,
             )
@@ -115,13 +148,16 @@ def recognize_image_bytes_with_vision(
                     "Content-Type": "application/json",
                 },
                 json=payload,
+                allow_redirects=False,
                 timeout=int(os.getenv("VISION_RECOGNITION_TIMEOUT", "60")),
             )
+        if 300 <= response.status_code < 400:
+            raise RuntimeError("redirect refused")
         response.raise_for_status()
         content = _response_content(response, stream=_env_bool("LLM_STREAM"))
         parsed = _parse_json_content(str(content))
     except (KeyError, TypeError, ValueError, RequestException, RuntimeError) as exc:
-        logger.warning("vision image recognition failed filename=%s error=%s", filename, exc)
+        logger.warning("vision image recognition failed error_type=%s", type(exc).__name__)
         return None
 
     return _normalize_vision_result(
@@ -153,7 +189,7 @@ def _build_payload(image_bytes: bytes, filename: str, experiment_type: str) -> d
                         "type": "text",
                         "text": (
                             "Classify this experiment image for report layout. "
-                            f"experiment_type={experiment_type}, filename={filename}. "
+                            f"experiment_type={experiment_type}. "
                             "Return JSON with category, category_cn, confidence, "
                             "review_level, review_reasons, suggested.insert_section, "
                             "suggested.caption, suggested.size_policy. "
